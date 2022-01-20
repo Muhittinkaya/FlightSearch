@@ -2,6 +2,9 @@ package kaya.springframework.FlightSearch.controller;
 
 import kaya.springframework.FlightSearch.entity.User;
 import kaya.springframework.FlightSearch.repository.UserRepository;
+import kaya.springframework.FlightSearch.service.SecurityService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -13,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class UserController {
 
     private UserRepository userRepository;
+    @Autowired
+    private BCryptPasswordEncoder encoder;
+    @Autowired
+    private SecurityService securityService;
 
     public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -25,6 +32,7 @@ public class UserController {
 
     @RequestMapping(value = "/registerUser")
     public String register(@ModelAttribute("user") User user){
+        user.setPassword(encoder.encode(user.getPassword()));
         userRepository.save(user);
         return "login/login";
     }
@@ -36,10 +44,8 @@ public class UserController {
 
     @RequestMapping(value = "/login", method = RequestMethod.POST)
     public String login(@RequestParam("email") String email, @RequestParam("password") String password, ModelMap modelMap){
-        User user = userRepository.findByEmail(email);
-        System.out.println("DEBUG DB " + user.getPassword());
-        System.out.println("DEBUG Param "+ password);
-        if (user.getPassword().equals(password)){
+        boolean loginResponse = securityService.login(email, password);
+        if (loginResponse){
             return "/findFlights";
         }else{
             modelMap.addAttribute("msg", "Invalid username or password");
